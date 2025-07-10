@@ -1,5 +1,9 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { NextRequest } from 'next/server'
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient()
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -55,4 +59,42 @@ export function debounce<T extends (...args: any[]) => any>(
     clearTimeout(timeout)
     timeout = setTimeout(() => func(...args), wait)
   }
+}
+
+/**
+ * Extracts clientId from query, body, or header.
+ * Returns null if not found.
+ */
+export async function extractClientId(req: NextRequest): Promise<string | null> {
+  // Try query param
+  const urlClientId = req.nextUrl?.searchParams?.get('clientId')
+  if (urlClientId) return urlClientId
+
+  // Try header
+  const headerClientId = req.headers.get('x-client-id')
+  if (headerClientId) return headerClientId
+
+  // Try body (if POST/PUT)
+  if (req.method === 'POST' || req.method === 'PUT') {
+    try {
+      const body = await req.json()
+      if (body && body.clientId) return body.clientId
+    } catch (e) {
+      // ignore
+    }
+  }
+  return null
+}
+
+/**
+ * Checks if the client has access to the given module name.
+ * Returns true if access is granted, false otherwise.
+ */
+export async function checkModuleAccess(clientId: string, moduleName: string): Promise<boolean> {
+  if (!clientId || !moduleName) return false
+  const access = await prisma.clientModule.findFirst({
+    where: { clientId, module: { name: moduleName } },
+    include: { module: true },
+  })
+  return !!access
 } 

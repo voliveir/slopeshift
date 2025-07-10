@@ -13,7 +13,17 @@ import {
   Settings, 
   ChevronLeft,
   ChevronRight,
-  Mountain
+  Mountain,
+  FileText,
+  LineChart,
+  Activity,
+  Box,
+  AlertTriangle,
+  Ticket,
+  BadgePercent,
+  User,
+  KeyRound,
+  BookOpen
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -23,16 +33,37 @@ const navigation = [
   { name: 'Staff', href: '/staff', icon: Users },
   { name: 'Housing', href: '/housing', icon: Home },
   { name: 'Certifications', href: '/certifications', icon: Award },
+  { name: 'Forms', href: '/forms', icon: FileText },
+  { name: 'Forecasting', href: '/forecasting', icon: LineChart },
+  { name: 'Telemetry', href: '/telemetry', icon: Activity },
+  { name: 'Assets', href: '/assets', icon: Box },
+  { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
+  { name: 'Tickets', href: '/tickets', icon: Ticket },
+  { name: 'Passes', href: '/passes', icon: BadgePercent },
+  { name: 'Guests', href: '/guests', icon: User },
+  { name: 'Rentals', href: '/rentals', icon: KeyRound },
+  { name: 'Lessons', href: '/lessons', icon: BookOpen },
+  { name: 'Admin', href: '/admin', icon: Settings }, // Use Settings icon for now
   { name: 'Settings', href: '/settings/general', icon: Settings },
 ]
 
 interface SidebarProps {
   className?: string
+  allowedModules?: string[]
 }
 
-export function Sidebar({ className }: SidebarProps) {
+export function Sidebar({ className, allowedModules }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false)
   const pathname = usePathname()
+
+  // Only show nav items that are in allowedModules, except always show Settings and Admin if allowed
+  const filteredNavigation = navigation.filter(
+    (item) =>
+      item.name === 'Settings' ||
+      (item.name === 'Admin' && allowedModules && allowedModules.includes('Admin')) ||
+      !allowedModules ||
+      allowedModules.includes(item.name)
+  )
 
   return (
     <motion.div
@@ -69,7 +100,7 @@ export function Sidebar({ className }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2">
-        {navigation.map((item) => {
+        {filteredNavigation.map((item) => {
           const isActive = pathname.startsWith(item.href.replace('/general', '')) && item.href.startsWith('/settings')
             ? pathname.startsWith('/settings')
             : pathname === item.href

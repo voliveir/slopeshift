@@ -1,34 +1,33 @@
-# Set the default behavior to automatically normalize line endings
+# Enforce consistent line endings and text handling
 * text=auto
 
-# Explicitly declare text files to use LF
-*.js text eol=lf
-*.ts text eol=lf
-*.tsx text eol=lf
-*.css text eol=lf
-*.md text eol=lf
+# Use LF for all code/text files
+*.js   text eol=lf
+*.jsx  text eol=lf
+*.ts   text eol=lf
+*.tsx  text eol=lf
 *.json text eol=lf
-*.yml text eol=lf
-*.yaml text eol=lf
-*.sh text eol=lf
-*.sql text eol=lf
-*.html text eol=lf
+*.md   text eol=lf
+*.css  text eol=lf
 *.scss text eol=lf
-*.env text eol=lf
+*.html text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.sh   text eol=lf
+*.sql  text eol=lf
 
-# Binary files (no normalization)
-*.png binary
-*.jpg binary
+# Treat lock files as text, but don't change line endings
+package-lock.json text
+
+# Binary files
+*.png  binary
+*.jpg  binary
 *.jpeg binary
-*.gif binary
-*.ico binary
-*.pdf binary
+*.gif  binary
+*.ico  binary
+*.svg  binary
 *.woff binary
 *.woff2 binary
-*.ttf binary
-*.eot binary
-*.mp4 binary
-*.mov binary
-*.zip binary
-*.gz binary
-*.tar binary 
+*.ttf  binary
+*.eot  binary
+*.pdf  binary 

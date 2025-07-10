@@ -1,253 +1,330 @@
-import { PrismaClient } from '@prisma/client'
+const { PrismaClient } = require('@prisma/client')
 const prisma = new PrismaClient()
 
+function randomFrom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
+
+function randomDate(start: Date, end: Date) {
+  return new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()))
+}
+
 async function main() {
+  console.log('Seeding started');
+  // --- Modules ---
+  const moduleNames = [
+    'Shifts', 'Staff', 'Housing', 'Certifications', 'Assets', 'Incidents',
+    'Tickets', 'Passes', 'Guests', 'Rentals', 'Lessons', 'Forms', 'Dashboard', 'Forecasting', 'Telemetry'
+  ]
+  const modules = await Promise.all(
+    moduleNames.map(name =>
+      prisma.module.upsert({
+        where: { name },
+        update: {},
+        create: { name, description: `${name} module` },
+      })
+    )
+  )
+  console.log('Modules seeded');
+
+  // --- Clients ---
+  // Find or create client by name (since only 'id' is unique)
+  let client = await prisma.client.findFirst({ where: { name: 'Demo Resort' } });
+  if (!client) {
+    client = await prisma.client.create({ data: { name: 'Demo Resort' } });
+  }
+  console.log('Client seeded:', client.id);
+
+  // --- Test Insert ---
+  const testStaff = await prisma.staff.create({
+    data: {
+      clientId: client.id,
+      name: 'Test User',
+      email: 'testuser@example.com',
+      position: 'Tester',
+      status: 'active',
+    }
+  });
+  console.log('Inserted test user:', testStaff.id);
+
+  // --- Assign Modules to Client ---
+  for (const mod of modules) {
+    const existing = await prisma.clientModule.findFirst({ where: { clientId: client.id, moduleId: mod.id } });
+    if (!existing) {
+      await prisma.clientModule.create({ data: { clientId: client.id, moduleId: mod.id } });
+    }
+  }
+  console.log('Client modules assigned');
+
   // --- Staff ---
-  const alice = await prisma.staff.create({
-    data: {
-      name: 'Alice Johnson',
-      email: 'alice@slopeshift.com',
-      position: 'Lift Operator',
-      status: 'active',
-    },
-  })
-  const bob = await prisma.staff.create({
-    data: {
-      name: 'Bob Smith',
-      email: 'bob@slopeshift.com',
-      position: 'Rental Tech',
-      status: 'active',
-    },
-  })
-  const carol = await prisma.staff.create({
-    data: {
-      name: 'Carol Lee',
-      email: 'carol@slopeshift.com',
-      position: 'Ski Patrol',
-      status: 'on_leave',
-    },
-  })
+  const positions = ['Lift Operator', 'Rental Tech', 'Ski Patrol', 'Instructor', 'Manager', 'Cook', 'Housekeeper']
+  const staff = []
+  for (let i = 0; i < 15; i++) {
+    staff.push(await prisma.staff.create({
+      data: {
+        clientId: client.id,
+        name: `Staff Member ${i + 1}`,
+        email: `staff${i + 1}@demo.com`,
+        position: randomFrom(positions),
+        status: randomFrom(['active', 'inactive', 'on_leave']),
+      },
+    }))
+  }
 
   // --- Shifts ---
-  const shift1 = await prisma.shift.create({
-    data: {
-      title: 'Morning Shift',
-      start: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      end: new Date(Date.now() + 2 * 60 * 60 * 1000),
-      staff: { connect: [{ id: alice.id }, { id: bob.id }] },
-    },
-  })
-
-  // --- TimeEntry ---
-  await prisma.timeEntry.createMany({
-    data: [
-      {
-        staffId: alice.id,
-        shiftId: shift1.id,
-        clockIn: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        clockOut: null,
-        source: 'mobile',
+  const shifts = []
+  for (let i = 0; i < 10; i++) {
+    const assignedStaff = staff.slice(i % staff.length, (i % staff.length) + 3).map(s => ({ id: s.id }))
+    shifts.push(await prisma.shift.create({
+      data: {
+        clientId: client.id,
+        title: `Shift ${i + 1}`,
+        start: randomDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), new Date()),
+        end: randomDate(new Date(), new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
+        staff: { connect: assignedStaff },
       },
-      {
-        staffId: bob.id,
-        shiftId: shift1.id,
-        clockIn: new Date(Date.now() - 2 * 60 * 60 * 1000),
+    }))
+  }
+
+  // --- TimeEntries ---
+  for (let i = 0; i < 30; i++) {
+    await prisma.timeEntry.create({
+      data: {
+        clientId: client.id,
+        staffId: randomFrom(staff).id,
+        shiftId: randomFrom(shifts).id,
+        clockIn: randomDate(new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), new Date()),
         clockOut: null,
-        source: 'kiosk',
+        source: randomFrom(['mobile', 'kiosk', 'web']),
       },
-    ],
-  })
+    })
+  }
 
-  // --- Task ---
-  await prisma.task.create({
-    data: {
-      title: 'Check Lift Safety',
-      status: 'todo',
-      assignedStaff: { connect: [{ id: alice.id }] },
-      dueDate: new Date(Date.now() + 3 * 60 * 60 * 1000),
-      checklist: ['Inspect cables', 'Test emergency stop'],
-    },
-  })
+  // --- Housing ---
+  const housingUnits = []
+  for (let i = 0; i < 8; i++) {
+    housingUnits.push(await prisma.housing.create({
+      data: {
+        clientId: client.id,
+        address: `${100 + i} Alpine Way`,
+        unit: String.fromCharCode(65 + i),
+        beds: randomFrom([2, 4, 6]),
+        residents: { connect: staff.slice(i, i + 2).map(s => ({ id: s.id })) },
+      },
+    }))
+  }
 
-  // --- Asset & MaintenanceLog ---
-  const snowcat = await prisma.asset.create({
-    data: {
-      name: 'Snowcat 3000',
-      type: 'snowcat',
-      serial: 'SNOW-3000-001',
-      nextServiceDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    },
-  })
-  await prisma.maintenanceLog.create({
-    data: {
-      assetId: snowcat.id,
-      performedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-      description: 'Oil change and inspection',
-    },
-  })
+  // --- Certifications ---
+  for (let i = 0; i < 20; i++) {
+    await prisma.certification.create({
+      data: {
+        clientId: client.id,
+        name: `Certification ${i + 1}`,
+        staffId: randomFrom(staff).id,
+        issueDate: randomDate(new Date(Date.now() - 365 * 24 * 60 * 60 * 1000), new Date()),
+        expiryDate: randomDate(new Date(), new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)),
+        authority: randomFrom(['NSAA', 'PSIA', 'AASI', 'Demo Authority']),
+      },
+    })
+  }
 
-  // --- IncidentReport ---
-  await prisma.incidentReport.create({
-    data: {
-      type: 'injury',
-      description: 'Minor wrist sprain on beginner slope',
-      location: 'Green Circle',
-      staffRefs: { connect: [{ id: carol.id }] },
-      attachments: [],
-      validated: true,
-    },
-  })
+  // --- Assets & MaintenanceLogs ---
+  const assetTypes = ['snowcat', 'lift', 'vehicle', 'snowmobile']
+  const assets = []
+  for (let i = 0; i < 10; i++) {
+    assets.push(await prisma.asset.create({
+      data: {
+        clientId: client.id,
+        name: `Asset ${i + 1}`,
+        type: randomFrom(assetTypes),
+        serial: `ASSET-${i + 1}`,
+        nextServiceDate: randomDate(new Date(), new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)),
+      },
+    }))
+  }
+  for (let i = 0; i < 20; i++) {
+    await prisma.maintenanceLog.create({
+      data: {
+        clientId: client.id,
+        assetId: randomFrom(assets).id,
+        performedAt: randomDate(new Date(Date.now() - 90 * 24 * 60 * 60 * 1000), new Date()),
+        description: `Maintenance log ${i + 1}`,
+      },
+    })
+  }
 
-  // --- Guest, Pass, Ticket ---
-  const guest = await prisma.guest.create({
-    data: {
-      name: 'Derek Guest',
-      email: 'derek@example.com',
-      phone: '555-1234',
-    },
-  })
-  const pass = await prisma.pass.create({
-    data: {
-      code: 'PASS-001',
-      guestId: guest.id,
-      validFrom: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-      validTo: new Date(Date.now() + 29 * 24 * 60 * 60 * 1000),
-    },
-  })
-  await prisma.ticket.create({
-    data: {
-      code: 'TICKET-001',
-      guestId: guest.id,
-      passId: pass.id,
-      status: 'active',
-      issuedAt: new Date(),
-    },
-  })
+  // --- Incidents ---
+  for (let i = 0; i < 10; i++) {
+    await prisma.incidentReport.create({
+      data: {
+        clientId: client.id,
+        type: randomFrom(['injury', 'equipment', 'safety']),
+        description: `Incident ${i + 1}`,
+        location: randomFrom(['Green Circle', 'Blue Square', 'Black Diamond']),
+        staffRefs: { connect: [randomFrom(staff)].map(s => ({ id: s.id })) },
+        attachments: [],
+        validated: Math.random() > 0.5,
+      },
+    })
+  }
 
-  // --- RentalItem & RentalTransaction ---
-  const skis = await prisma.rentalItem.create({
-    data: {
-      name: 'Atomic Redster',
-      type: 'ski',
-      serial: 'SKI-001',
-      status: 'available',
-    },
-  })
-  await prisma.rentalTransaction.create({
-    data: {
-      guestId: guest.id,
-      itemId: skis.id,
-      staffId: bob.id,
-      rentedAt: new Date(Date.now() - 30 * 60 * 1000),
-      returnedAt: null,
-    },
-  })
+  // --- Guests, Passes, Tickets ---
+  const guests = []
+  for (let i = 0; i < 12; i++) {
+    guests.push(await prisma.guest.create({
+      data: {
+        clientId: client.id,
+        name: `Guest ${i + 1}`,
+        email: `guest${i + 1}@demo.com`,
+        phone: `555-12${100 + i}`,
+      },
+    }))
+  }
+  const passes = []
+  for (let i = 0; i < 10; i++) {
+    passes.push(await prisma.pass.create({
+      data: {
+        clientId: client.id,
+        code: `PASS-${i + 1}`,
+        guestId: randomFrom(guests).id,
+        validFrom: randomDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), new Date()),
+        validTo: randomDate(new Date(), new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)),
+      },
+    }))
+  }
+  for (let i = 0; i < 20; i++) {
+    await prisma.ticket.create({
+      data: {
+        clientId: client.id,
+        code: `TICKET-${i + 1}`,
+        guestId: randomFrom(guests).id,
+        passId: randomFrom(passes).id,
+        status: randomFrom(['active', 'voided', 'used']),
+        issuedAt: randomDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), new Date()),
+      },
+    })
+  }
 
-  // --- Lesson, InstructorProfile, GroupBooking ---
-  const instructor = await prisma.instructorProfile.create({
-    data: {
-      staffId: alice.id,
-      skills: ['ski', 'snowboard'],
-    },
-  })
-  const group = await prisma.groupBooking.create({
-    data: {
-      name: 'Family Ski Lesson',
-      guests: { connect: [{ id: guest.id }] },
-    },
-  })
-  await prisma.lesson.create({
-    data: {
-      title: 'Beginner Group Lesson',
-      instructorId: instructor.id,
-      groupId: group.id,
-      start: new Date(Date.now() + 1 * 60 * 60 * 1000),
-      end: new Date(Date.now() + 2 * 60 * 60 * 1000),
-    },
-  })
+  // --- RentalItems & RentalTransactions ---
+  const rentalTypes = ['ski', 'board', 'helmet', 'boots']
+  const rentalItems = []
+  for (let i = 0; i < 10; i++) {
+    rentalItems.push(await prisma.rentalItem.create({
+      data: {
+        clientId: client.id,
+        name: `Rental Item ${i + 1}`,
+        type: randomFrom(rentalTypes),
+        serial: `RENTAL-${i + 1}`,
+        status: randomFrom(['available', 'rented', 'maintenance']),
+      },
+    }))
+  }
+  for (let i = 0; i < 15; i++) {
+    await prisma.rentalTransaction.create({
+      data: {
+        clientId: client.id,
+        guestId: randomFrom(guests).id,
+        itemId: randomFrom(rentalItems).id,
+        staffId: randomFrom(staff).id,
+        rentedAt: randomDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), new Date()),
+        returnedAt: Math.random() > 0.5 ? randomDate(new Date(Date.now() - 15 * 24 * 60 * 60 * 1000), new Date()) : null,
+      },
+    })
+  }
 
-  // --- Housing, MoveIn, MoveOut, HousingIssue ---
-  const housing = await prisma.housing.create({
-    data: {
-      address: '123 Alpine Way',
-      unit: 'A',
-      beds: 4,
-      residents: { connect: [{ id: alice.id }, { id: bob.id }] },
-    },
-  })
-  await prisma.moveIn.create({
-    data: {
-      housingId: housing.id,
-      staffId: alice.id,
-      date: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
-    },
-  })
-  await prisma.moveOut.create({
-    data: {
-      housingId: housing.id,
-      staffId: bob.id,
-      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    },
-  })
-  await prisma.housingIssue.create({
-    data: {
-      housingId: housing.id,
-      staffId: alice.id,
-      description: 'Leaky faucet in kitchen',
-      status: 'open',
-    },
-  })
+  // --- Lessons, InstructorProfiles, GroupBookings ---
+  const instructors = []
+  for (let i = 0; i < 5; i++) {
+    instructors.push(await prisma.instructorProfile.create({
+      data: {
+        clientId: client.id,
+        staffId: staff[i].id,
+        skills: ['ski', 'snowboard'],
+      },
+    }))
+  }
+  const groups = []
+  for (let i = 0; i < 5; i++) {
+    groups.push(await prisma.groupBooking.create({
+      data: {
+        clientId: client.id,
+        name: `Group ${i + 1}`,
+        guests: { connect: guests.slice(i, i + 2).map(g => ({ id: g.id })) },
+      },
+    }))
+  }
+  for (let i = 0; i < 10; i++) {
+    await prisma.lesson.create({
+      data: {
+        clientId: client.id,
+        title: `Lesson ${i + 1}`,
+        instructorId: randomFrom(instructors).id,
+        groupId: randomFrom(groups).id,
+        start: randomDate(new Date(), new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)),
+        end: randomDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)),
+      },
+    })
+  }
 
-  // --- FormTemplate & FormResponse ---
-  const waiver = await prisma.formTemplate.create({
-    data: {
-      name: 'Liability Waiver',
-      fields: ['name', 'signature', 'date'],
-    },
-  })
-  await prisma.formResponse.create({
-    data: {
-      templateId: waiver.id,
-      guestId: guest.id,
-      responses: JSON.stringify({ name: 'Derek Guest', signature: 'D. Guest', date: new Date().toISOString() }),
-      signedPdf: null,
-    },
-  })
+  // --- Forms & FormResponses ---
+  const formTemplates = []
+  for (let i = 0; i < 5; i++) {
+    formTemplates.push(await prisma.formTemplate.create({
+      data: {
+        clientId: client.id,
+        name: `Form Template ${i + 1}`,
+        fields: ['name', 'signature', 'date'],
+      },
+    }))
+  }
+  for (let i = 0; i < 15; i++) {
+    await prisma.formResponse.create({
+      data: {
+        clientId: client.id,
+        templateId: randomFrom(formTemplates).id,
+        guestId: randomFrom(guests).id,
+        data: JSON.stringify({ name: randomFrom(guests).name, signature: 'Signature', date: new Date().toISOString() }),
+        submittedAt: randomDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), new Date()),
+      },
+    })
+  }
 
   // --- Intelligence Layer ---
-  await prisma.opsDashboardSnapshot.create({
-    data: {
-      timestamp: new Date(),
-      laborCost: 320.5,
-      revenue: 1200.0,
-      margin: 879.5,
-    },
-  })
-  await prisma.forecastingSuggestion.create({
-    data: {
-      date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      staffNeeded: 12,
-      reason: 'Expected snowstorm and holiday weekend',
-    },
-  })
-  await prisma.telemetryPing.create({
-    data: {
-      assetId: snowcat.id,
-      runHours: 120.5,
-      fuelUsed: 30.2,
-      waterUsed: 500.0,
-      pingedAt: new Date(),
-    },
-  })
-
-  // TODO: Add more advanced seeding for certifications, checklists, attachments, etc.
+  for (let i = 0; i < 5; i++) {
+    await prisma.opsDashboardSnapshot.create({
+      data: {
+        clientId: client.id,
+        data: JSON.stringify({ laborCost: Math.random() * 1000, revenue: Math.random() * 5000, margin: Math.random() * 2000 }),
+        createdAt: randomDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), new Date()),
+      },
+    })
+    await prisma.forecastingSuggestion.create({
+      data: {
+        clientId: client.id,
+        data: JSON.stringify({ staffNeeded: Math.floor(Math.random() * 20), reason: 'Random event' }),
+        createdAt: randomDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), new Date()),
+      },
+    })
+    await prisma.telemetryPing.create({
+      data: {
+        clientId: client.id,
+        assetId: randomFrom(assets).id,
+        data: JSON.stringify({ systemHealth: 'Good', responseTime: Math.floor(Math.random() * 100), activeUsers: Math.floor(Math.random() * 10), errorRate: Math.random() }),
+        pingedAt: randomDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), new Date()),
+        createdAt: randomDate(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), new Date()),
+      },
+    })
+  }
+  console.log('Intelligence layer seeded');
 }
 
 main()
-  .catch((e) => {
+  .catch(e => {
     console.error(e)
     process.exit(1)
   })
   .finally(async () => {
     await prisma.$disconnect()
-  }) 
+  })
+
+module.exports = { main } 

@@ -9,7 +9,7 @@ export default function FormsPage() {
   useEffect(() => {
     fetch('/api/forms')
       .then(res => res.json())
-      .then(data => setForms(data))
+      .then(data => setForms(Array.isArray(data) ? data : []))
       .finally(() => setLoading(false))
   }, [])
 
@@ -36,7 +36,7 @@ export default function FormsPage() {
             </tr>
           </thead>
           <tbody>
-            {forms.map(form => (
+            {Array.isArray(forms) && forms.map(form => (
               <tr key={form.id} className="border-b hover:bg-gray-50">
                 <td className="p-3 font-medium">{form.title}</td>
                 <td className="p-3">{form.type}</td>

@@ -7,6 +7,10 @@ import { AnimatePresence, motion } from 'framer-motion'
 import React from 'react'
 import { ToastProvider } from '@/components/toast'
 import { CommandPaletteProvider } from '@/components/command-palette'
+import { useAllowedModules } from '@/hooks/useAllowedModules'
+
+// TODO: Replace this with actual clientId from auth/session
+const CLIENT_ID = typeof window !== 'undefined' ? localStorage.getItem('clientId') : null
 
 const routeTitles: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -34,12 +38,14 @@ function getTitle(pathname: string) {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const title = getTitle(pathname)
+  // Use the custom hook to fetch allowed modules
+  const { modules: allowedModules } = useAllowedModules(CLIENT_ID)
   return (
     <CommandPaletteProvider>
       <ToastProvider>
         <div className="flex h-screen bg-secondary-50 dark:bg-secondary-950">
           {/* Sidebar */}
-          <Sidebar className="hidden md:flex" />
+          <Sidebar className="hidden md:flex" allowedModules={allowedModules} />
           
           {/* Main Content */}
           <div className="flex-1 flex flex-col overflow-hidden">

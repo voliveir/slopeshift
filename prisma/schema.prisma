@@ -14,6 +14,8 @@ datasource db {
 // --- Operations Core ---
 model Staff {
   id           String   @id @default(uuid())
+  client       Client   @relation(fields: [clientId], references: [id])
+  clientId     String
   name         String
   email        String   @unique
   phone        String?
@@ -41,6 +43,8 @@ model Staff {
 
 model Shift {
   id         String     @id @default(uuid())
+  client     Client     @relation(fields: [clientId], references: [id])
+  clientId   String
   title      String
   start      DateTime
   end        DateTime
@@ -52,6 +56,8 @@ model Shift {
 
 model TimeEntry {
   id        String   @id @default(uuid())
+  client    Client   @relation(fields: [clientId], references: [id])
+  clientId  String
   staff     Staff    @relation(fields: [staffId], references: [id])
   staffId   String
   shift     Shift?   @relation(fields: [shiftId], references: [id])
@@ -65,6 +71,8 @@ model TimeEntry {
 
 model Task {
   id          String   @id @default(uuid())
+  client      Client   @relation(fields: [clientId], references: [id])
+  clientId    String
   title       String
   status      String   // TODO: Enum (todo, in_progress, done, etc.)
   assignedStaff Staff[] @relation("AssignedTasks")
@@ -79,6 +87,8 @@ model Task {
 
 model Asset {
   id             String   @id @default(uuid())
+  client         Client   @relation(fields: [clientId], references: [id])
+  clientId       String
   name           String
   type           String   // TODO: Enum (lift, vehicle, snowcat, etc.)
   serial         String?
@@ -92,6 +102,8 @@ model Asset {
 
 model MaintenanceLog {
   id         String   @id @default(uuid())
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
   asset      Asset    @relation(fields: [assetId], references: [id])
   assetId    String
   performedAt DateTime
@@ -103,6 +115,8 @@ model MaintenanceLog {
 
 model IncidentReport {
   id          String   @id @default(uuid())
+  client      Client   @relation(fields: [clientId], references: [id])
+  clientId    String
   type        String  // TODO: Enum (injury, equipment, safety, etc.)
   description String
   location    String?
@@ -115,6 +129,8 @@ model IncidentReport {
 
 model Certification {
   id         String   @id @default(uuid())
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
   name       String
   staff      Staff?   @relation(fields: [staffId], references: [id])
   staffId    String?
@@ -129,6 +145,8 @@ model Certification {
 // --- Revenue Modules ---
 model Ticket {
   id         String   @id @default(uuid())
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
   code       String   @unique
   guest      Guest?   @relation(fields: [guestId], references: [id])
   guestId    String?
@@ -141,6 +159,8 @@ model Ticket {
 
 model Pass {
   id         String   @id @default(uuid())
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
   code       String   @unique
   guest      Guest?   @relation(fields: [guestId], references: [id])
   guestId    String?
@@ -151,6 +171,8 @@ model Pass {
 
 model Guest {
   id         String   @id @default(uuid())
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
   name       String
   email      String?
   phone      String?
@@ -163,6 +185,8 @@ model Guest {
 
 model RentalItem {
   id         String   @id @default(uuid())
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
   name       String
   type       String   // TODO: Enum (ski, board, helmet, etc.)
   serial     String?
@@ -174,6 +198,8 @@ model RentalItem {
 
 model RentalTransaction {
   id         String   @id @default(uuid())
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
   guest      Guest    @relation(fields: [guestId], references: [id])
   guestId    String
   item       RentalItem @relation(fields: [itemId], references: [id])
@@ -186,6 +212,8 @@ model RentalTransaction {
 
 model Lesson {
   id         String   @id @default(uuid())
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
   title      String
   instructor InstructorProfile? @relation(fields: [instructorId], references: [id])
   instructorId String?
@@ -198,6 +226,8 @@ model Lesson {
 
 model InstructorProfile {
   id         String   @id @default(uuid())
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
   staff      Staff    @relation(fields: [staffId], references: [id])
   staffId    String   @unique
   skills     String[] // TODO: Use Skill model for advanced
@@ -206,8 +236,10 @@ model InstructorProfile {
 
 model GroupBooking {
   id         String   @id @default(uuid())
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
   name       String
-  guests     Guest[] @relation("GroupBookingGuests")
+  guests     Guest[]  @relation("GroupBookingGuests")
   lessons    Lesson[]
   createdAt  DateTime @default(now())
 }
@@ -215,6 +247,8 @@ model GroupBooking {
 // --- Infrastructure & Guest Experience ---
 model FormTemplate {
   id         String   @id @default(uuid())
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
   name       String
   fields     String[] // TODO: Use JSON or separate model for fields
   responses  FormResponse[]
@@ -223,21 +257,24 @@ model FormTemplate {
 
 model FormResponse {
   id         String   @id @default(uuid())
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
   template   FormTemplate @relation(fields: [templateId], references: [id])
   templateId String
   guest      Guest?   @relation(fields: [guestId], references: [id])
   guestId    String?
-  responses  String   // TODO: JSON
-  signedPdf  String?  // URL to signed PDF
-  createdAt  DateTime @default(now())
+  data       String   // TODO: JSON
+  submittedAt DateTime @default(now())
 }
 
 model Housing {
   id         String   @id @default(uuid())
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
   address    String
   unit       String?
-  beds       Int
-  residents  Staff[] @relation("HousingResidents")
+  beds       Int?
+  residents  Staff[]  @relation("HousingResidents")
   moveIns    MoveIn[]
   moveOuts   MoveOut[]
   issues     HousingIssue[]
@@ -246,58 +283,110 @@ model Housing {
 
 model MoveIn {
   id         String   @id @default(uuid())
-  housing    Housing  @relation(fields: [housingId], references: [id])
-  housingId  String
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
   staff      Staff    @relation(fields: [staffId], references: [id])
   staffId    String
+  housing    Housing  @relation(fields: [housingId], references: [id])
+  housingId  String
   date       DateTime
 }
 
 model MoveOut {
   id         String   @id @default(uuid())
-  housing    Housing  @relation(fields: [housingId], references: [id])
-  housingId  String
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
   staff      Staff    @relation(fields: [staffId], references: [id])
   staffId    String
+  housing    Housing  @relation(fields: [housingId], references: [id])
+  housingId  String
   date       DateTime
 }
 
 model HousingIssue {
   id         String   @id @default(uuid())
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
   housing    Housing  @relation(fields: [housingId], references: [id])
   housingId  String
   staff      Staff?   @relation(fields: [staffId], references: [id])
   staffId    String?
   description String
   status     String   // TODO: Enum (open, closed, etc.)
-  createdAt  DateTime @default(now())
+  reportedAt DateTime @default(now())
 }
 
 // --- Intelligence Layer ---
 model OpsDashboardSnapshot {
   id         String   @id @default(uuid())
-  timestamp  DateTime
-  laborCost  Float?
-  revenue    Float?
-  margin     Float?
-  // TODO: Add more KPIs
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
+  data       String   // JSON
+  createdAt  DateTime @default(now())
 }
 
 model ForecastingSuggestion {
   id         String   @id @default(uuid())
-  date       DateTime
-  staffNeeded Int
-  reason     String?
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
+  data       String   // JSON
   createdAt  DateTime @default(now())
 }
 
 model TelemetryPing {
   id         String   @id @default(uuid())
-  asset      Asset    @relation(fields: [assetId], references: [id])
-  assetId    String
-  runHours   Float?
-  fuelUsed   Float?
-  waterUsed  Float?
+  client     Client   @relation(fields: [clientId], references: [id])
+  clientId   String
+  asset      Asset?   @relation(fields: [assetId], references: [id])
+  assetId    String?
+  data       String   // JSON
   pingedAt   DateTime @default(now())
   createdAt  DateTime @default(now())
+} 
+
+model Client {
+  id        String         @id @default(uuid())
+  name      String
+  // Add more fields as needed (contact info, billing, etc.)
+  modules   ClientModule[]
+  staff     Staff[]
+  shifts    Shift[]
+  timeEntries TimeEntry[]
+  tasks     Task[]
+  assets    Asset[]
+  maintenanceLogs MaintenanceLog[]
+  incidentReports IncidentReport[]
+  certifications Certification[]
+  tickets   Ticket[]
+  passes    Pass[]
+  guests    Guest[]
+  rentalItems RentalItem[]
+  rentalTransactions RentalTransaction[]
+  lessons   Lesson[]
+  instructorProfiles InstructorProfile[]
+  groupBookings GroupBooking[]
+  formTemplates FormTemplate[]
+  formResponses FormResponse[]
+  housing   Housing[]
+  moveIns   MoveIn[]
+  moveOuts  MoveOut[]
+  housingIssues HousingIssue[]
+  opsDashboardSnapshots OpsDashboardSnapshot[]
+  forecastingSuggestions ForecastingSuggestion[]
+  telemetryPings TelemetryPing[]
+}
+
+model Module {
+  id        String         @id @default(uuid())
+  name      String         @unique
+  description String?
+  clients   ClientModule[]
+}
+
+model ClientModule {
+  id        String   @id @default(uuid())
+  client    Client   @relation(fields: [clientId], references: [id])
+  clientId  String
+  module    Module   @relation(fields: [moduleId], references: [id])
+  moduleId  String
 } 
