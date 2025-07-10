@@ -1,3 +1,14 @@
 {
-  "/page": "app/page.js"
+  "/not-found": "app/not-found.js",
+  "/page": "app/page.js",
+  "/login/page": "app/login/page.js",
+  "/(app)/dashboard/page": "app/(app)/dashboard/page.js",
+  "/features/finance-analytics/page": "app/features/finance-analytics/page.js",
+  "/features/ticketing-passes/page": "app/features/ticketing-passes/page.js",
+  "/api/admin/clients/route": "app/api/admin/clients/route.js",
+  "/api/admin/modules/route": "app/api/admin/modules/route.js",
+  "/api/client-modules/route": "app/api/client-modules/route.js",
+  "/api/dashboard/route": "app/api/dashboard/route.js",
+  "/api/admin/clients/[id]/route": "app/api/admin/clients/[id]/route.js",
+  "/admin/page": "app/admin/page.js"
 }

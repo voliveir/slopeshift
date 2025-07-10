@@ -123,3 +123,14 @@ SlopeShift is a modular, multi-tenant platform built with Next.js, Prisma, and S
 ---
 
 *This section reflects all progress and improvements made since the previous summary update.* 
+
+---
+
+## Recent Accomplishments (Post-Previous Summary)
+
+- **Restored dynamic, client-specific sidebar:** Sidebar now shows modules based on client assignment, using a new module config and the useAllowedModules hook. Admins see a fixed set of links.
+- **Restored and aligned SlopeShift logo:** Logo appears at the top of the sidebar, aligned with the dashboard top bar.
+- **Made impersonation banner full-width:** Banner now stretches across the entire screen above sidebar and content.
+- **Isolated landing page from app layout:** Moved sidebar/topbar layout to a dedicated file and wrapped only app pages (like dashboard) in it, so the landing page loads all sections and is unaffected by app layout.
+- **Fixed landing page footer:** Legal section now appears to the right of Resources by updating the grid to lg:grid-cols-6 and ensuring correct column spans/order.
+- **General UI/UX polish:** Ensured all changes are visually consistent and robust across admin, client, and landing experiences. 

@@ -89,7 +89,7 @@ export function FeaturesGrid() {
                 {feature.description}
               </p>
               <motion.a
-                href="#"
+                href={feature.title === 'Ticketing & Passes' ? '/features/ticketing-passes' : feature.title === 'Rental & Demo Gear' ? '/features/rental-demo-gear' : feature.title === 'Retail & F&B POS' ? '/features/retail-fnb-pos' : feature.title === 'Lift & Trail Maintenance' ? '/features/lift-trail-maintenance' : feature.title === 'Snowmaking & Grooming' ? '/features/snowmaking-grooming' : feature.title === 'Finance & Analytics' ? '/features/finance-analytics' : '#'}
                 whileHover={{ x: 5 }}
                 className="inline-flex items-center text-primary-alpine font-semibold hover:text-primary-alpine/80 transition-colors duration-200"
               >
