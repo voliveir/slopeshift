@@ -9,9 +9,11 @@ export default function GuestsPage() {
   useEffect(() => {
     fetch('/api/guests')
       .then(res => res.json())
-      .then(data => setGuests(data))
+      .then(data => setGuests(Array.isArray(data) ? data : Array.isArray(data.guests) ? data.guests : []))
       .finally(() => setLoading(false))
   }, [])
+
+  const guestsList = Array.isArray(guests) ? guests : [];
 
   return (
     <div className="max-w-5xl mx-auto p-8">
@@ -35,7 +37,7 @@ export default function GuestsPage() {
             </tr>
           </thead>
           <tbody>
-            {guests.map(guest => (
+            {guestsList.map(guest => (
               <tr key={guest.id} className="border-b hover:bg-gray-50">
                 <td className="p-3 font-medium">{guest.name}</td>
                 <td className="p-3">{guest.email}</td>

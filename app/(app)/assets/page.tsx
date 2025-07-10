@@ -9,9 +9,11 @@ export default function AssetsPage() {
   useEffect(() => {
     fetch('/api/assets')
       .then(res => res.json())
-      .then(data => setAssets(data))
+      .then(data => setAssets(Array.isArray(data) ? data : Array.isArray(data.assets) ? data.assets : []))
       .finally(() => setLoading(false))
   }, [])
+
+  const assetsList = Array.isArray(assets) ? assets : [];
 
   return (
     <div className="max-w-5xl mx-auto p-8">
@@ -36,7 +38,7 @@ export default function AssetsPage() {
             </tr>
           </thead>
           <tbody>
-            {assets.map(asset => (
+            {assetsList.map(asset => (
               <tr key={asset.id} className="border-b hover:bg-gray-50">
                 <td className="p-3 font-medium">{asset.name}</td>
                 <td className="p-3">{asset.type}</td>

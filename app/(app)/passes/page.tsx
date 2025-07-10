@@ -9,9 +9,11 @@ export default function PassesPage() {
   useEffect(() => {
     fetch('/api/passes')
       .then(res => res.json())
-      .then(data => setPasses(data))
+      .then(data => setPasses(Array.isArray(data) ? data : Array.isArray(data.passes) ? data.passes : []))
       .finally(() => setLoading(false))
   }, [])
+
+  const passesList = Array.isArray(passes) ? passes : [];
 
   return (
     <div className="max-w-5xl mx-auto p-8">
@@ -36,7 +38,7 @@ export default function PassesPage() {
             </tr>
           </thead>
           <tbody>
-            {passes.map(pass => (
+            {passesList.map(pass => (
               <tr key={pass.id} className="border-b hover:bg-gray-50">
                 <td className="p-3 font-medium">{pass.code}</td>
                 <td className="p-3">{pass.guest?.name || '-'}</td>

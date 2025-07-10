@@ -9,9 +9,11 @@ export default function TicketsPage() {
   useEffect(() => {
     fetch('/api/tickets')
       .then(res => res.json())
-      .then(data => setTickets(data))
+      .then(data => setTickets(Array.isArray(data) ? data : Array.isArray(data.tickets) ? data.tickets : []))
       .finally(() => setLoading(false))
   }, [])
+
+  const ticketsList = Array.isArray(tickets) ? tickets : [];
 
   return (
     <div className="max-w-5xl mx-auto p-8">
@@ -37,7 +39,7 @@ export default function TicketsPage() {
             </tr>
           </thead>
           <tbody>
-            {tickets.map(ticket => (
+            {ticketsList.map(ticket => (
               <tr key={ticket.id} className="border-b hover:bg-gray-50">
                 <td className="p-3 font-medium">{ticket.code}</td>
                 <td className="p-3">{ticket.status}</td>

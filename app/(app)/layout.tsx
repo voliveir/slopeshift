@@ -4,12 +4,11 @@ import { Sidebar } from '@/components/sidebar'
 import { TopBar } from '@/components/top-bar'
 import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { ToastProvider } from '@/components/toast'
 import { CommandPaletteProvider } from '@/components/command-palette'
 import { useAllowedModules } from '@/hooks/useAllowedModules'
 
-// TODO: Replace this with actual clientId from auth/session
 const CLIENT_ID = typeof window !== 'undefined' ? localStorage.getItem('clientId') : null
 
 const routeTitles: Record<string, string> = {
@@ -25,7 +24,6 @@ const routeTitles: Record<string, string> = {
 }
 
 function getTitle(pathname: string) {
-  // Try exact match, then partial for settings subroutes
   if (routeTitles[pathname]) return routeTitles[pathname]
   if (pathname.startsWith('/settings/')) {
     const key = Object.keys(routeTitles).find(k => pathname.startsWith(k))
@@ -38,17 +36,58 @@ function getTitle(pathname: string) {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const title = getTitle(pathname)
-  // Use the custom hook to fetch allowed modules
   const { modules: allowedModules } = useAllowedModules(CLIENT_ID)
+
+  // Impersonation banner logic
+  const [impersonating, setImpersonating] = useState<string | null>(null)
+  const [impersonatedClientName, setImpersonatedClientName] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const cid = localStorage.getItem('clientId')
+      setImpersonating(cid)
+      if (cid) {
+        // Try to get the client name from allowedModules or fetch from API
+        fetch(`/api/admin/clients/${cid}`)
+          .then(res => res.json())
+          .then(data => setImpersonatedClientName(data.client?.name || cid))
+          .catch(() => setImpersonatedClientName(cid))
+      } else {
+        setImpersonatedClientName(null)
+      }
+    }
+  }, [CLIENT_ID])
+
+  const handleStopImpersonate = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('clientId')
+      window.location.href = '/admin'
+    }
+  }
+
   return (
     <CommandPaletteProvider>
       <ToastProvider>
         <div className="flex h-screen bg-secondary-50 dark:bg-secondary-950">
           {/* Sidebar */}
           <Sidebar className="hidden md:flex" allowedModules={allowedModules} />
-          
           {/* Main Content */}
           <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Impersonation Banner */}
+            {impersonating && impersonatedClientName && (
+              <div className="p-4 bg-yellow-100 dark:bg-yellow-900 border-b border-yellow-400 dark:border-yellow-700 flex items-center justify-between shadow">
+                <div className="flex items-center space-x-2">
+                  <span className="font-bold text-yellow-800 dark:text-yellow-200">Impersonating:</span>
+                  <span className="font-semibold text-yellow-900 dark:text-yellow-100">{impersonatedClientName}</span>
+                </div>
+                <button
+                  onClick={handleStopImpersonate}
+                  className="ml-4 px-3 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700 font-semibold"
+                >
+                  Stop Impersonating
+                </button>
+              </div>
+            )}
             {/* Top Bar with animated title */}
             <TopBar
               title={
@@ -66,7 +105,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </AnimatePresence>
               }
             />
-            
             {/* Page Content */}
             <main className="flex-1 overflow-auto p-6">
               {children}

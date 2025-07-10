@@ -20,15 +20,27 @@ export default function AdminPortalPage() {
   const [enabledModules, setEnabledModules] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [impersonating, setImpersonating] = useState<string | null>(null)
+  const [impersonatedClient, setImpersonatedClient] = useState<Client | null>(null)
 
-  // TODO: Replace with real clientId from session/auth
-  const ADMIN_CLIENT_ID = typeof window !== 'undefined' ? localStorage.getItem('clientId') : null
+  // Check if impersonating
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const cid = localStorage.getItem('clientId')
+      setImpersonating(cid)
+      if (cid && clients.length > 0) {
+        const client = clients.find(c => c.id === cid)
+        setImpersonatedClient(client || null)
+      } else {
+        setImpersonatedClient(null)
+      }
+    }
+  }, [clients])
 
   // Fetch all clients
   useEffect(() => {
-    if (!ADMIN_CLIENT_ID) return
     setLoading(true)
-    fetch(`/api/admin/clients?clientId=${ADMIN_CLIENT_ID}`)
+    fetch('/api/admin/clients')
       .then(res => res.json())
       .then(data => {
         setClients(data.clients || [])
@@ -38,23 +50,22 @@ export default function AdminPortalPage() {
         setError('Failed to fetch clients')
         setLoading(false)
       })
-  }, [ADMIN_CLIENT_ID])
+  }, [])
 
   // Fetch all modules
   useEffect(() => {
-    if (!ADMIN_CLIENT_ID) return
-    fetch(`/api/admin/modules?clientId=${ADMIN_CLIENT_ID}`)
+    fetch('/api/admin/modules')
       .then(res => res.json())
       .then(data => setModules(data.modules || []))
-  }, [ADMIN_CLIENT_ID])
+  }, [])
 
   // Fetch enabled modules for selected client
   useEffect(() => {
-    if (!selectedClient || !ADMIN_CLIENT_ID) return
-    fetch(`/api/admin/clients/${selectedClient.id}/modules?clientId=${ADMIN_CLIENT_ID}`)
+    if (!selectedClient) return
+    fetch(`/api/admin/clients/${selectedClient.id}/modules`)
       .then(res => res.json())
       .then(data => setEnabledModules(data.modules || []))
-  }, [selectedClient, ADMIN_CLIENT_ID])
+  }, [selectedClient])
 
   // Handle client info update
   const handleClientInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,9 +74,9 @@ export default function AdminPortalPage() {
   }
 
   const handleSaveClientInfo = async () => {
-    if (!selectedClient || !ADMIN_CLIENT_ID) return
+    if (!selectedClient) return
     setLoading(true)
-    await fetch(`/api/admin/clients/${selectedClient.id}?clientId=${ADMIN_CLIENT_ID}`, {
+    await fetch(`/api/admin/clients/${selectedClient.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(selectedClient),
@@ -84,9 +95,9 @@ export default function AdminPortalPage() {
   }
 
   const handleSaveModules = async () => {
-    if (!selectedClient || !ADMIN_CLIENT_ID) return
+    if (!selectedClient) return
     setLoading(true)
-    await fetch(`/api/admin/clients/${selectedClient.id}/modules?clientId=${ADMIN_CLIENT_ID}`, {
+    await fetch(`/api/admin/clients/${selectedClient.id}/modules`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ modules: enabledModules }),
@@ -94,31 +105,69 @@ export default function AdminPortalPage() {
     setLoading(false)
   }
 
+  // Impersonate logic
+  const handleImpersonate = (client: Client) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('clientId', client.id)
+      window.location.href = '/dashboard'
+    }
+  }
+  const handleStopImpersonate = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('clientId')
+      window.location.reload()
+    }
+  }
+
   return (
     <div className="max-w-4xl mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-6">SlopeShift Admin Portal</h1>
+      {/* Impersonation Banner */}
+      {impersonating && impersonatedClient && (
+        <div className="mb-6 p-4 rounded-lg bg-yellow-100 dark:bg-yellow-900 flex items-center justify-between border border-yellow-400 dark:border-yellow-700 shadow">
+          <div className="flex items-center space-x-2">
+            <span className="font-bold text-yellow-800 dark:text-yellow-200">Impersonating:</span>
+            <span className="font-semibold text-yellow-900 dark:text-yellow-100">{impersonatedClient.name}</span>
+          </div>
+          <button
+            onClick={handleStopImpersonate}
+            className="ml-4 px-3 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700 font-semibold"
+          >
+            Stop Impersonating
+          </button>
+        </div>
+      )}
+      <h1 className="text-3xl font-bold mb-6 text-secondary-900 dark:text-white">
+        SlopeShift Admin Portal {impersonating && impersonatedClient && <span className="ml-2 text-yellow-500">(Impersonating {impersonatedClient.name})</span>}
+      </h1>
       <div className="space-y-8">
         {/* Clients List */}
-        <section className="bg-white dark:bg-secondary-900 rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Clients</h2>
-          {loading && <p>Loading...</p>}
-          {error && <p className="text-red-500">{error}</p>}
+        <section className="bg-white dark:bg-secondary-800 rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4 text-secondary-900 dark:text-white">Clients</h2>
+          {loading && <p className="dark:text-secondary-100">Loading...</p>}
+          {error && <p className="text-red-500 dark:text-red-400">{error}</p>}
           <ul className="space-y-2">
             {clients.map(client => (
-              <li key={client.id}>
+              <li key={client.id} className="flex items-center justify-between">
                 <button
-                  className={`text-left w-full px-2 py-1 rounded ${selectedClient?.id === client.id ? 'bg-primary-100 dark:bg-primary-900/30' : 'hover:bg-secondary-100 dark:hover:bg-secondary-800'}`}
+                  className={`text-left w-full px-2 py-1 rounded ${selectedClient?.id === client.id ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-900 dark:text-primary-100' : 'hover:bg-secondary-100 dark:hover:bg-secondary-700 text-secondary-900 dark:text-secondary-100'}`}
                   onClick={() => setSelectedClient(client)}
                 >
-                  {client.name} <span className="text-xs text-secondary-500">({client.id})</span>
+                  {client.name} <span className="text-xs text-secondary-500 dark:text-secondary-300">({client.id})</span>
+                </button>
+                <button
+                  onClick={() => handleImpersonate(client)}
+                  className="ml-4 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold"
+                  title="Impersonate this client"
+                >
+                  Impersonate
                 </button>
               </li>
             ))}
           </ul>
         </section>
         {/* Edit Client Info */}
-        <section className="bg-white dark:bg-secondary-900 rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Edit Client Info</h2>
+        <section className="bg-white dark:bg-secondary-800 rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4 text-secondary-900 dark:text-white">Edit Client Info</h2>
           {selectedClient ? (
             <div className="space-y-4">
               <label className="block">
@@ -128,7 +177,7 @@ export default function AdminPortalPage() {
                   name="name"
                   value={selectedClient.name || ''}
                   onChange={handleClientInfoChange}
-                  className="mt-1 block w-full rounded border border-secondary-300 dark:border-secondary-700 bg-secondary-50 dark:bg-secondary-800 p-2"
+                  className="mt-1 block w-full rounded border border-secondary-300 dark:border-secondary-700 bg-secondary-50 dark:bg-secondary-900 p-2 text-secondary-900 dark:text-white"
                 />
               </label>
               {/* Add more fields as needed */}
@@ -141,16 +190,16 @@ export default function AdminPortalPage() {
               </button>
             </div>
           ) : (
-            <p>Select a client to edit their info.</p>
+            <p className="dark:text-secondary-100">Select a client to edit their info.</p>
           )}
         </section>
         {/* Manage Modules */}
-        <section className="bg-white dark:bg-secondary-900 rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold mb-4">Manage Enabled Modules</h2>
+        <section className="bg-white dark:bg-secondary-800 rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4 text-secondary-900 dark:text-white">Manage Enabled Modules</h2>
           {selectedClient ? (
             <div className="space-y-2">
               {modules.map(module => (
-                <label key={module.id} className="flex items-center space-x-2">
+                <label key={module.id} className="flex items-center space-x-2 text-secondary-900 dark:text-secondary-100">
                   <input
                     type="checkbox"
                     checked={enabledModules.includes(module.name)}
@@ -168,7 +217,7 @@ export default function AdminPortalPage() {
               </button>
             </div>
           ) : (
-            <p>Select a client to manage their enabled modules.</p>
+            <p className="dark:text-secondary-100">Select a client to manage their enabled modules.</p>
           )}
         </section>
       </div>

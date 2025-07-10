@@ -9,9 +9,11 @@ export default function RentalsPage() {
   useEffect(() => {
     fetch('/api/rentals')
       .then(res => res.json())
-      .then(data => setRentals(data))
+      .then(data => setRentals(Array.isArray(data) ? data : Array.isArray(data.rentals) ? data.rentals : []))
       .finally(() => setLoading(false))
   }, [])
+
+  const rentalsList = Array.isArray(rentals) ? rentals : [];
 
   return (
     <div className="max-w-5xl mx-auto p-8">
@@ -37,7 +39,7 @@ export default function RentalsPage() {
             </tr>
           </thead>
           <tbody>
-            {rentals.map(rental => (
+            {rentalsList.map(rental => (
               <tr key={rental.id} className="border-b hover:bg-gray-50">
                 <td className="p-3 font-medium">{rental.item?.name || '-'}</td>
                 <td className="p-3">{rental.guest?.name || '-'}</td>

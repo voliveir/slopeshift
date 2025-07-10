@@ -9,9 +9,11 @@ export default function HousingPage() {
   useEffect(() => {
     fetch('/api/housing')
       .then(res => res.json())
-      .then(data => setHousing(data))
+      .then(data => setHousing(Array.isArray(data) ? data : Array.isArray(data.housing) ? data.housing : []))
       .finally(() => setLoading(false))
   }, [])
+
+  const housingList = Array.isArray(housing) ? housing : [];
 
   return (
     <div className="max-w-5xl mx-auto p-8">
@@ -36,7 +38,7 @@ export default function HousingPage() {
             </tr>
           </thead>
           <tbody>
-            {housing.map(house => (
+            {housingList.map(house => (
               <tr key={house.id} className="border-b hover:bg-gray-50">
                 <td className="p-3 font-medium">{house.address}</td>
                 <td className="p-3">{house.unit}</td>

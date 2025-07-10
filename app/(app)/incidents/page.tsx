@@ -9,9 +9,11 @@ export default function IncidentsPage() {
   useEffect(() => {
     fetch('/api/incidents')
       .then(res => res.json())
-      .then(data => setIncidents(data))
+      .then(data => setIncidents(Array.isArray(data) ? data : Array.isArray(data.incidents) ? data.incidents : []))
       .finally(() => setLoading(false))
   }, [])
+
+  const incidentsList = Array.isArray(incidents) ? incidents : [];
 
   return (
     <div className="max-w-5xl mx-auto p-8">
@@ -36,7 +38,7 @@ export default function IncidentsPage() {
             </tr>
           </thead>
           <tbody>
-            {incidents.map(incident => (
+            {incidentsList.map(incident => (
               <tr key={incident.id} className="border-b hover:bg-gray-50">
                 <td className="p-3 font-medium">{incident.type}</td>
                 <td className="p-3">{incident.description}</td>

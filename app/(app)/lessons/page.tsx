@@ -9,9 +9,11 @@ export default function LessonsPage() {
   useEffect(() => {
     fetch('/api/lessons')
       .then(res => res.json())
-      .then(data => setLessons(data))
+      .then(data => setLessons(Array.isArray(data) ? data : Array.isArray(data.lessons) ? data.lessons : []))
       .finally(() => setLoading(false))
   }, [])
+
+  const lessonsList = Array.isArray(lessons) ? lessons : [];
 
   return (
     <div className="max-w-5xl mx-auto p-8">
@@ -37,7 +39,7 @@ export default function LessonsPage() {
             </tr>
           </thead>
           <tbody>
-            {lessons.map(lesson => (
+            {lessonsList.map(lesson => (
               <tr key={lesson.id} className="border-b hover:bg-gray-50">
                 <td className="p-3 font-medium">{lesson.title}</td>
                 <td className="p-3">{lesson.instructor?.staff?.name || '-'}</td>
