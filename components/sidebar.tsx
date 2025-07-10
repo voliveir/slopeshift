@@ -1,143 +1,84 @@
-'use client'
+import React from "react";
+import { Home, Puzzle, CreditCard, List, Mountain } from "lucide-react";
+import { useAllowedModules } from "@/hooks/useAllowedModules";
+import { MODULE_CONFIGS } from "./moduleConfig";
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { 
-  LayoutDashboard, 
-  Calendar, 
-  Users, 
-  Home, 
-  Award, 
-  Settings, 
-  ChevronLeft,
-  ChevronRight,
-  Mountain,
-  FileText,
-  LineChart,
-  Activity,
-  Box,
-  AlertTriangle,
-  Ticket,
-  BadgePercent,
-  User,
-  KeyRound,
-  BookOpen
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
+const adminNavItems = [
+  { label: "Clients", icon: <Home size={18} />, href: "/admin" },
+  { label: "Modules", icon: <Puzzle size={18} />, href: "/admin/modules" },
+  { label: "Billing", icon: <CreditCard size={18} />, href: "/admin/billing" },
+  { label: "Logs", icon: <List size={18} />, href: "/admin/logs" },
+];
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Shifts', href: '/shifts', icon: Calendar },
-  { name: 'Staff', href: '/staff', icon: Users },
-  { name: 'Housing', href: '/housing', icon: Home },
-  { name: 'Certifications', href: '/certifications', icon: Award },
-  { name: 'Forms', href: '/forms', icon: FileText },
-  { name: 'Forecasting', href: '/forecasting', icon: LineChart },
-  { name: 'Telemetry', href: '/telemetry', icon: Activity },
-  { name: 'Assets', href: '/assets', icon: Box },
-  { name: 'Incidents', href: '/incidents', icon: AlertTriangle },
-  { name: 'Tickets', href: '/tickets', icon: Ticket },
-  { name: 'Passes', href: '/passes', icon: BadgePercent },
-  { name: 'Guests', href: '/guests', icon: User },
-  { name: 'Rentals', href: '/rentals', icon: KeyRound },
-  { name: 'Lessons', href: '/lessons', icon: BookOpen },
-  { name: 'Admin', href: '/admin', icon: Settings }, // Use Settings icon for now
-  { name: 'Settings', href: '/settings/general', icon: Settings },
-]
+export default function Sidebar() {
+  // Detect if impersonating a client
+  let clientId: string | null = null;
+  if (typeof window !== "undefined") {
+    clientId = localStorage.getItem("clientId");
+  }
+  const { modules: allowedModules, loading } = useAllowedModules(clientId);
 
-interface SidebarProps {
-  className?: string
-  allowedModules?: string[]
-}
-
-export function Sidebar({ className, allowedModules }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false)
-  const pathname = usePathname()
-
-  // Only show nav items that are in allowedModules, except always show Settings and Admin if allowed
-  const filteredNavigation = navigation.filter(
-    (item) =>
-      item.name === 'Settings' ||
-      (item.name === 'Admin' && allowedModules && allowedModules.includes('Admin')) ||
-      !allowedModules ||
-      allowedModules.includes(item.name)
-  )
-
-  return (
-    <motion.div
-      initial={{ width: 280 }}
-      animate={{ width: collapsed ? 80 : 280 }}
-      className={cn(
-        "bg-white dark:bg-secondary-900 border-r border-secondary-200 dark:border-secondary-800 flex flex-col h-full",
-        className
-      )}
+  // Logo section
+  const logo = (
+    <a
+      href={clientId ? "/dashboard" : "/admin"}
+      className="flex items-center gap-2 mb-6 px-3 py-2 select-none hover:bg-gray-50 dark:hover:bg-slate-800 rounded-lg transition-all"
+      aria-label="SlopeShift Home"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-secondary-200 dark:border-secondary-800">
-        <motion.div
-          initial={{ opacity: 1 }}
-          animate={{ opacity: collapsed ? 0 : 1 }}
-          className="flex items-center space-x-2"
-        >
-          <Mountain className="h-8 w-8 text-primary-600" />
-          <span className="text-xl font-bold text-secondary-900 dark:text-white">
-            SlopeShift
-          </span>
-        </motion.div>
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-1 rounded-lg hover:bg-secondary-100 dark:hover:bg-secondary-800 transition-colors"
-        >
-          {collapsed ? (
-            <ChevronRight className="h-4 w-4 text-secondary-600 dark:text-secondary-400" />
+      <Mountain className="h-7 w-7 text-primary-alpine" />
+      <span className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">SlopeShift</span>
+    </a>
+  );
+
+  // If impersonating a client, show allowed modules
+  if (clientId) {
+    return (
+      <nav aria-label="Client sidebar" className="prose-sm flex flex-col gap-2 py-4 px-2 bg-white dark:bg-slate-900 shadow-md rounded-r-xl min-w-[200px]">
+        {logo}
+        {loading ? (
+          <div className="text-gray-400 px-3 py-2">Loading modules...</div>
+        ) : (
+          allowedModules.length === 0 ? (
+            <div className="text-gray-400 px-3 py-2">No modules enabled</div>
           ) : (
-            <ChevronLeft className="h-4 w-4 text-secondary-600 dark:text-secondary-400" />
-          )}
-        </button>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
-        {filteredNavigation.map((item) => {
-          const isActive = pathname.startsWith(item.href.replace('/general', '')) && item.href.startsWith('/settings')
-            ? pathname.startsWith('/settings')
-            : pathname === item.href
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors group",
-                isActive
-                  ? "bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400"
-                  : "text-secondary-700 dark:text-secondary-300 hover:bg-secondary-100 dark:hover:bg-secondary-800"
-              )}
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              <motion.span
-                initial={{ opacity: 1 }}
-                animate={{ opacity: collapsed ? 0 : 1 }}
-                className="font-medium"
-              >
-                {item.name}
-              </motion.span>
-            </Link>
+            allowedModules.map((moduleName) => {
+              const config = MODULE_CONFIGS[moduleName];
+              if (!config) return null;
+              return (
+                <a
+                  key={config.name}
+                  href={config.href}
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                  tabIndex={0}
+                  aria-label={config.label}
+                >
+                  {config.getIcon()}
+                  <span className="font-medium">{config.label}</span>
+                </a>
+              );
+            })
           )
-        })}
+        )}
       </nav>
+    );
+  }
 
-      {/* Footer */}
-      <div className="p-4 border-t border-secondary-200 dark:border-secondary-800">
-        <motion.div
-          initial={{ opacity: 1 }}
-          animate={{ opacity: collapsed ? 0 : 1 }}
-          className="text-xs text-secondary-500 dark:text-secondary-400 text-center"
+  // Default: show admin nav
+  return (
+    <nav aria-label="Admin sidebar" className="prose-sm flex flex-col gap-2 py-4 px-2 bg-white dark:bg-slate-900 shadow-md rounded-r-xl min-w-[200px]">
+      {logo}
+      {adminNavItems.map((item) => (
+        <a
+          key={item.label}
+          href={item.href}
+          className="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+          tabIndex={0}
+          aria-label={item.label}
         >
-          v1.0.0
-        </motion.div>
-      </div>
-    </motion.div>
-  )
+          {item.icon}
+          <span className="font-medium">{item.label}</span>
+        </a>
+      ))}
+    </nav>
+  );
 } 

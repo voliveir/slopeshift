@@ -1,8 +1,17 @@
 "use client";
 
 import React, { useEffect, useState } from 'react'
+import AppLayout from "../app-layout";
 
-export default function DashboardPage() {
+export default function DashboardPageWrapper() {
+  return (
+    <AppLayout>
+      <DashboardPage />
+    </AppLayout>
+  );
+}
+
+function DashboardPage() {
   const [dashboardData, setDashboardData] = useState<any>({})
   const [loading, setLoading] = useState(true)
 

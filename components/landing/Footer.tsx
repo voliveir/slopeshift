@@ -34,7 +34,7 @@ export function Footer() {
   return (
     <footer className="bg-gray-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-6 gap-8">
           {/* Logo and description */}
           <div className="lg:col-span-2">
             <motion.div
@@ -80,8 +80,8 @@ export function Footer() {
             </motion.div>
           </div>
 
-          {/* Footer links */}
-          {Object.entries(footerLinks).map(([category, links], categoryIndex) => (
+          {/* Footer links in new order: Product, Company, Resources, Legal */}
+          {["product", "company", "resources", "legal"].map((category, categoryIndex) => (
             <motion.div
               key={category}
               initial={{ opacity: 0, y: 20 }}
@@ -93,7 +93,7 @@ export function Footer() {
                 {category}
               </h3>
               <ul className="space-y-3">
-                {links.map((link) => (
+                {(footerLinks[category as keyof typeof footerLinks] as { name: string; href: string }[]).map((link) => (
                   <li key={link.name}>
                     <a
                       href={link.href}

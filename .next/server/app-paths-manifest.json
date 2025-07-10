@@ -1,16 +1,3 @@
 {
-  "/api/client-modules/route": "app/api/client-modules/route.js",
-  "/api/admin/clients/[id]/route": "app/api/admin/clients/[id]/route.js",
-  "/api/lessons/route": "app/api/lessons/route.js",
-  "/api/dashboard/route": "app/api/dashboard/route.js",
-  "/api/admin/clients/route": "app/api/admin/clients/route.js",
-  "/api/admin/modules/route": "app/api/admin/modules/route.js",
-  "/api/admin/clients/[id]/modules/route": "app/api/admin/clients/[id]/modules/route.js",
-  "/(app)/passes/page": "app/(app)/passes/page.js",
-  "/(app)/guests/page": "app/(app)/guests/page.js",
-  "/(app)/lessons/page": "app/(app)/lessons/page.js",
-  "/(app)/rentals/page": "app/(app)/rentals/page.js",
-  "/(app)/dashboard/page": "app/(app)/dashboard/page.js",
-  "/(app)/settings/general/page": "app/(app)/settings/general/page.js",
-  "/(app)/admin/page": "app/(app)/admin/page.js"
+  "/page": "app/page.js"
 }
