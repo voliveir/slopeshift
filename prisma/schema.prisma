@@ -1,0 +1,303 @@
+// SlopeShift Unified Resort Ops Platform - Prisma Schema
+// Modules: Operations Core, Revenue, Infrastructure/Guest, Intelligence
+// All relations are now bi-directional and named for Prisma compatibility.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Operations Core ---
+model Staff {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  phone        String?
+  position     String?
+  department   String?
+  hireDate     DateTime?
+  hourlyRate   Float?
+  status       String   // TODO: Enum (active, inactive, on_leave)
+  certifications Certification[]
+  timeEntries  TimeEntry[]
+  assignedTasks Task[] @relation("AssignedTasks")
+  incidentReports IncidentReport[] @relation("IncidentStaffRefs")
+  instructorProfile InstructorProfile?
+  // ShiftStaff relation (many-to-many)
+  shifts       Shift[] @relation("ShiftStaff")
+  // Housing relations
+  housingResidencies Housing[] @relation("HousingResidents")
+  moveIns      MoveIn[]
+  moveOuts     MoveOut[]
+  housingIssues HousingIssue[]
+  rentalTransactions RentalTransaction[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Shift {
+  id         String     @id @default(uuid())
+  title      String
+  start      DateTime
+  end        DateTime
+  staff      Staff[]    @relation("ShiftStaff")
+  timeEntries TimeEntry[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+model TimeEntry {
+  id        String   @id @default(uuid())
+  staff     Staff    @relation(fields: [staffId], references: [id])
+  staffId   String
+  shift     Shift?   @relation(fields: [shiftId], references: [id])
+  shiftId   String?
+  clockIn   DateTime
+  clockOut  DateTime?
+  geo       String?  // TODO: Geo type
+  source    String?  // e.g., mobile, kiosk
+  createdAt DateTime @default(now())
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  status      String   // TODO: Enum (todo, in_progress, done, etc.)
+  assignedStaff Staff[] @relation("AssignedTasks")
+  asset       Asset?   @relation(fields: [assetId], references: [id])
+  assetId     String?
+  dueDate     DateTime?
+  checklist   String[] // TODO: Use a separate model for advanced checklists
+  workOrderLogs MaintenanceLog[] @relation("TaskWorkOrder")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Asset {
+  id             String   @id @default(uuid())
+  name           String
+  type           String   // TODO: Enum (lift, vehicle, snowcat, etc.)
+  serial         String?
+  nextServiceDate DateTime?
+  maintenanceLogs MaintenanceLog[]
+  tasks          Task[]
+  telemetryPings TelemetryPing[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model MaintenanceLog {
+  id         String   @id @default(uuid())
+  asset      Asset    @relation(fields: [assetId], references: [id])
+  assetId    String
+  performedAt DateTime
+  description String
+  workOrder   Task?    @relation("TaskWorkOrder", fields: [workOrderId], references: [id])
+  workOrderId String?
+  createdAt   DateTime @default(now())
+}
+
+model IncidentReport {
+  id          String   @id @default(uuid())
+  type        String  // TODO: Enum (injury, equipment, safety, etc.)
+  description String
+  location    String?
+  staffRefs   Staff[] @relation("IncidentStaffRefs")
+  attachments String[] // TODO: Use a separate Attachment model
+  createdAt   DateTime @default(now())
+  validated   Boolean  @default(false)
+  pdfUrl      String?  // Generated PDF summary
+}
+
+model Certification {
+  id         String   @id @default(uuid())
+  name       String
+  staff      Staff?   @relation(fields: [staffId], references: [id])
+  staffId    String?
+  issueDate  DateTime?
+  expiryDate DateTime?
+  authority  String?
+  rentalItem RentalItem? @relation(fields: [rentalItemId], references: [id])
+  rentalItemId String?
+  createdAt  DateTime @default(now())
+}
+
+// --- Revenue Modules ---
+model Ticket {
+  id         String   @id @default(uuid())
+  code       String   @unique
+  guest      Guest?   @relation(fields: [guestId], references: [id])
+  guestId    String?
+  status     String   // TODO: Enum (active, voided, used)
+  issuedAt   DateTime @default(now())
+  scannedAt  DateTime?
+  pass       Pass?    @relation(fields: [passId], references: [id])
+  passId     String?
+}
+
+model Pass {
+  id         String   @id @default(uuid())
+  code       String   @unique
+  guest      Guest?   @relation(fields: [guestId], references: [id])
+  guestId    String?
+  validFrom  DateTime
+  validTo    DateTime
+  tickets    Ticket[]
+}
+
+model Guest {
+  id         String   @id @default(uuid())
+  name       String
+  email      String?
+  phone      String?
+  tickets    Ticket[]
+  passes     Pass[]
+  rentalTransactions RentalTransaction[]
+  forms      FormResponse[]
+  groupBookings GroupBooking[] @relation("GroupBookingGuests")
+}
+
+model RentalItem {
+  id         String   @id @default(uuid())
+  name       String
+  type       String   // TODO: Enum (ski, board, helmet, etc.)
+  serial     String?
+  status     String   // TODO: Enum (available, rented, maintenance)
+  certifications Certification[]
+  rentalTransactions RentalTransaction[]
+  createdAt  DateTime @default(now())
+}
+
+model RentalTransaction {
+  id         String   @id @default(uuid())
+  guest      Guest    @relation(fields: [guestId], references: [id])
+  guestId    String
+  item       RentalItem @relation(fields: [itemId], references: [id])
+  itemId     String
+  staff      Staff?   @relation(fields: [staffId], references: [id])
+  staffId    String?
+  rentedAt   DateTime @default(now())
+  returnedAt DateTime?
+}
+
+model Lesson {
+  id         String   @id @default(uuid())
+  title      String
+  instructor InstructorProfile? @relation(fields: [instructorId], references: [id])
+  instructorId String?
+  group      GroupBooking? @relation(fields: [groupId], references: [id])
+  groupId    String?
+  start      DateTime
+  end        DateTime
+  createdAt  DateTime @default(now())
+}
+
+model InstructorProfile {
+  id         String   @id @default(uuid())
+  staff      Staff    @relation(fields: [staffId], references: [id])
+  staffId    String   @unique
+  skills     String[] // TODO: Use Skill model for advanced
+  lessons    Lesson[]
+}
+
+model GroupBooking {
+  id         String   @id @default(uuid())
+  name       String
+  guests     Guest[] @relation("GroupBookingGuests")
+  lessons    Lesson[]
+  createdAt  DateTime @default(now())
+}
+
+// --- Infrastructure & Guest Experience ---
+model FormTemplate {
+  id         String   @id @default(uuid())
+  name       String
+  fields     String[] // TODO: Use JSON or separate model for fields
+  responses  FormResponse[]
+  createdAt  DateTime @default(now())
+}
+
+model FormResponse {
+  id         String   @id @default(uuid())
+  template   FormTemplate @relation(fields: [templateId], references: [id])
+  templateId String
+  guest      Guest?   @relation(fields: [guestId], references: [id])
+  guestId    String?
+  responses  String   // TODO: JSON
+  signedPdf  String?  // URL to signed PDF
+  createdAt  DateTime @default(now())
+}
+
+model Housing {
+  id         String   @id @default(uuid())
+  address    String
+  unit       String?
+  beds       Int
+  residents  Staff[] @relation("HousingResidents")
+  moveIns    MoveIn[]
+  moveOuts   MoveOut[]
+  issues     HousingIssue[]
+  createdAt  DateTime @default(now())
+}
+
+model MoveIn {
+  id         String   @id @default(uuid())
+  housing    Housing  @relation(fields: [housingId], references: [id])
+  housingId  String
+  staff      Staff    @relation(fields: [staffId], references: [id])
+  staffId    String
+  date       DateTime
+}
+
+model MoveOut {
+  id         String   @id @default(uuid())
+  housing    Housing  @relation(fields: [housingId], references: [id])
+  housingId  String
+  staff      Staff    @relation(fields: [staffId], references: [id])
+  staffId    String
+  date       DateTime
+}
+
+model HousingIssue {
+  id         String   @id @default(uuid())
+  housing    Housing  @relation(fields: [housingId], references: [id])
+  housingId  String
+  staff      Staff?   @relation(fields: [staffId], references: [id])
+  staffId    String?
+  description String
+  status     String   // TODO: Enum (open, closed, etc.)
+  createdAt  DateTime @default(now())
+}
+
+// --- Intelligence Layer ---
+model OpsDashboardSnapshot {
+  id         String   @id @default(uuid())
+  timestamp  DateTime
+  laborCost  Float?
+  revenue    Float?
+  margin     Float?
+  // TODO: Add more KPIs
+}
+
+model ForecastingSuggestion {
+  id         String   @id @default(uuid())
+  date       DateTime
+  staffNeeded Int
+  reason     String?
+  createdAt  DateTime @default(now())
+}
+
+model TelemetryPing {
+  id         String   @id @default(uuid())
+  asset      Asset    @relation(fields: [assetId], references: [id])
+  assetId    String
+  runHours   Float?
+  fuelUsed   Float?
+  waterUsed  Float?
+  pingedAt   DateTime @default(now())
+  createdAt  DateTime @default(now())
+} 
